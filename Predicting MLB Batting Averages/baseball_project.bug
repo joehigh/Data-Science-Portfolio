@@ -1,0 +1,51 @@
+model {
+  
+  # Level 1 model
+  for (i in 1:n){
+    avg[i] ~ dnorm(avg.hat[i],avg.precision)
+    avg.hat[i] <- b0[playerID[i]] + b1*avg.lag1[i] + b2*avg.lag2[i] + b3*age[i] + b4*age.square[i]
+  }
+
+  # Level 1 priors - note that a quirk of jags is that dnorm has a precision as second argument, not variance
+  b1 ~ dnorm(0,.001)
+  b2 ~ dnorm(0,.001)
+  b3 ~ dnorm(0,.001)
+  b4 ~ dnorm(0,.001)
+  avg.precision ~ dgamma(.001,.001)
+  
+  # Level 2 model
+  for(j in 1:J){
+    b0[j] ~ dnorm(b0.hat[j],b0.precision)
+    b0.hat[j] <- g0 + g1*height[j] + g2*height.square[j] + g3*weight[j] + g4*weight.square[j] + 
+      g5*year[j] + g6*spline.liveball[j] + g7*spline.expansion[j] + g8*spline.freeagency[j] + 
+      g9*spline.steroids[j] + g10*spline.modern[j]
+  }
+
+  # Level 2 priors
+  b0.precision ~ dgamma(.001,.001)
+  g0 ~ dnorm(0,.001)
+  g1 ~ dnorm(0,.001)
+  g2 ~ dnorm(0,.001)
+  g3 ~ dnorm(0,.001)
+  g4 ~ dnorm(0,.001)
+  g5 ~ dnorm(0,.001)
+  g6 ~ dnorm(0,.001)
+  g7 ~ dnorm(0,.001)
+  g8 ~ dnorm(0,.001)
+  g9 ~ dnorm(0,.001)
+  g10 ~ dnorm(0,.001)
+  
+  # Predictive posterior for 100 different player-years (selectd at random in the R code)
+  for(k in 1:100){
+    pb0.hat[k] <- g0 + g1*height[tests[k]] + g2*height.square[tests[k]] + g3*weight[tests[k]] + 
+      g4*weight.square[tests[k]] + g5*year[tests[k]] + g6*spline.liveball[tests[k]] + 
+      g7*spline.expansion[tests[k]] + g8*spline.freeagency[tests[k]] + g9*spline.steroids[tests[k]] + 
+      g10*spline.modern[tests[k]]
+    pb0[k] ~ dnorm(pb0.hat[k],b0.precision)
+    pavg.hat[k] <- pb0[k] + b1*avg.lag1[tests[k]] + b2*avg.lag2[tests[k]] + b3*age[tests[k]] + 
+      b4*age.square[tests[k]]
+    pavg[k] ~ dnorm(pavg.hat[k],avg.precision) # This is where we calculate the posterior predictive
+  }
+  
+  
+}
